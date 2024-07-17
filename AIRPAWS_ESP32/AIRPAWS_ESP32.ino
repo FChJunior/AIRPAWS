@@ -2,11 +2,13 @@
   Projto: AIR PAWS
   Autor Cód.: Chagas Junior
   Data: 17/07/2024
-  Versão: 0.1
+  Versão: 0.2
 //==========================================================================================*/
 //==================================== Bibliotecas =========================================//
 #include <LiquidCrystal_I2C.h>
 #include <DHT.h>
+#include <WiFiManager.h>
+#include <WebServer.h>
 //==========================================================================================//
 
 //=================================== Definições LCD ========================================//
@@ -24,7 +26,15 @@ float temp = 0;
 float umid = 0;
 
 DHT dht(DHTPIN, DHTTYPE);
-//==========================================================================================//
+//===========================================================================================//
+
+//=================================== Configuração WiFi =====================================//
+#define WiFIMode WIFI_STA
+#define SSID "AIR PAWS"
+bool connected = false;
+
+WiFiManager wifi;
+//===========================================================================================//
 
 //========================== Definições Caracteres Especiais ================================//
 byte grau[8] = {
@@ -117,7 +127,7 @@ void Starting()
   for(int i = 0; i < 16; i++)
   {
     lcd.write(255);
-    delay(300);
+    delay(250);
   }
 
   lcd.clear();
@@ -126,6 +136,28 @@ void Starting()
   lcd.setCursor(4,1);
   lcd.print("AIR PAWS");
   delay(2000);
+
+  ConnectingWifi();
+}
+bool ConnectingWifi()
+{
+  lcd.clear();
+  lcd.setCursor(3,0);
+  lcd.print("Rede WIFI:");
+  lcd.setCursor(4,1);
+  lcd.print(SSID);
+
+  connected = wifi.autoConnect(SSID);
+
+  if(!connected) ESP.restart();
+
+  lcd.clear();
+  lcd.setCursor(3,0);
+  lcd.print("Rede WIFI:");
+  lcd.setCursor(2,1);
+  lcd.print("CONECTADO!!!");
+  delay(2000);
+  return true;
 }
 bool SensoresRead() {
   umid = dht.readHumidity();
