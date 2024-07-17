@@ -80,7 +80,7 @@ byte heart[8] = {
 //==========================================================================================//
 
 //================================ Variáveis Auxiliares ====================================//
-#define ledRed   13
+#define ledRed 13
 #define ledGreen 12
 #define pot A0
 
@@ -110,55 +110,92 @@ void setup() {
   Starting();
 }
 void loop() {
+
+  if ((WiFi.status() != WL_CONNECTED)) Reconnection();
   if (!SensoresRead()) return;
-  LCD();
+  SensoresScreem();
   Alarms();
   delay(500);
 }
 //==========================================================================================//
 
-//================================== Métodos Auxiliares ====================================//
-void Starting()
-{
+//================================ Métodos Inicialização ===================================//
+void Starting() {
   lcd.clear();
   lcd.print("Iniciado AIRPAWS");
-  lcd.setCursor(0,1);
+  lcd.setCursor(0, 1);
 
-  for(int i = 0; i < 16; i++)
-  {
+  for (int i = 0; i < 16; i++) {
     lcd.write(255);
     delay(250);
   }
 
   lcd.clear();
-  lcd.setCursor(2,0);
+  lcd.setCursor(2, 0);
   lcd.print("Bem-vindo ao");
-  lcd.setCursor(4,1);
+  lcd.setCursor(4, 1);
   lcd.print("AIR PAWS");
   delay(2000);
 
   ConnectingWifi();
 }
-bool ConnectingWifi()
-{
+void ConnectingWifi() {
   lcd.clear();
-  lcd.setCursor(3,0);
+  lcd.setCursor(3, 0);
   lcd.print("Rede WIFI:");
-  lcd.setCursor(4,1);
+  lcd.setCursor(4, 1);
   lcd.print(SSID);
 
   connected = wifi.autoConnect(SSID);
 
-  if(!connected) ESP.restart();
+  if (!connected) ESP.restart();
 
   lcd.clear();
-  lcd.setCursor(3,0);
+  lcd.setCursor(3, 0);
   lcd.print("Rede WIFI:");
-  lcd.setCursor(2,1);
+  lcd.setCursor(2, 1);
   lcd.print("CONECTADO!!!");
   delay(2000);
-  return true;
 }
+void Reconnection() {
+  if (WiFi.status() != WL_CONNECTED) {
+
+    lcd.clear();
+    lcd.noBlink();
+    lcd.setCursor(4, 0);
+    lcd.print("REDE WIFI");
+    lcd.setCursor(4, 1);
+    lcd.print("PERDIDA!!");
+    delay(2000);
+
+    lcd.clear();
+    lcd.print("Reconentando!");
+
+    WiFi.begin(wifi.getWiFiSSID(), wifi.getWiFiPass());
+    int i = 0;
+    while (WiFi.status() != WL_CONNECTED) {  // Espera a conexão WiFi ser estabelecida
+      lcd.setCursor(i, 1);
+      lcd.write(255);
+      delay(250);
+      i++;
+      if (i > 15) {
+        i = 0;
+        lcd.clear();
+        lcd.print("Reconentando!");
+      }
+    }
+
+    lcd.clear();
+    lcd.setCursor(3, 0);
+    lcd.print("Rede WIFI:");
+    lcd.setCursor(2, 1);
+    lcd.print("CONECTADO!!!");
+    delay(2000);
+  }
+}
+//==========================================================================================//
+
+//============================ Métodos Leitura e Mensagens =================================//
 bool SensoresRead() {
   umid = dht.readHumidity();
   temp = dht.readTemperature();
@@ -175,8 +212,7 @@ bool SensoresRead() {
 
   return true;
 }
-void LCD()
-{
+void SensoresScreem() {
   lcd.clear();
   lcd.write(2);
   lcd.print(umid);
@@ -195,12 +231,10 @@ void LCD()
   lcd.setCursor(4, 1);
   lcd.blink();
 }
-void Alarms()
-{
-  if(batimentos <= 50 || batimentos >= 160)
-  {
+void Alarms() {
+  if (batimentos <= 50 || batimentos >= 160) {
     ledRedState = !ledRedState;
-  }
+  } else ledRedState = LOW;
   digitalWrite(ledGreen, ledGreenState);
   digitalWrite(ledRed, ledRedState);
 }
