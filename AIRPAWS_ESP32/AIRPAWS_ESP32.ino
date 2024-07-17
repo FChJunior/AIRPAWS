@@ -9,7 +9,7 @@
 #include <DHT.h>
 //==========================================================================================//
 
-//=================================== Definiçõe LCD ========================================//
+//=================================== Definições LCD ========================================//
 #define address 0x27
 #define coluns 16
 #define rows 2
@@ -17,7 +17,7 @@
 LiquidCrystal_I2C lcd(address, coluns, rows);
 //==========================================================================================//
 
-//=================================== Definiçõe DHT ========================================//
+//=================================== Definições DHT ========================================//
 #define DHTPIN 5
 #define DHTTYPE DHT11
 float temp = 0;
@@ -26,7 +26,7 @@ float umid = 0;
 DHT dht(DHTPIN, DHTTYPE);
 //==========================================================================================//
 
-//========================== Definiçõe Caracteres Especiais ================================//
+//========================== Definições Caracteres Especiais ================================//
 byte grau[8] = {
   0b00000,
   0b01110,
@@ -57,17 +57,7 @@ byte termometro[8] = {
   0b11111,
   0b01110
 };
-byte heartVoid[8] = {
-  0b00000,
-  0b01010,
-  0b10101,
-  0b10001,
-  0b01010,
-  0b00100,
-  0b00000,
-  0b00000
-};
-byte heartFull[8] = {
+byte heart[8] = {
   0b00000,
   0b01010,
   0b11111,
@@ -80,8 +70,8 @@ byte heartFull[8] = {
 //==========================================================================================//
 
 //================================ Variáveis Auxiliares ====================================//
-#define ledRed   2
-#define ledGreen 4
+#define ledRed   13
+#define ledGreen 12
 #define pot A0
 
 int ledRedState = 0;
@@ -100,8 +90,7 @@ void setup() {
   lcd.createChar(0, grau);
   lcd.createChar(1, termometro);
   lcd.createChar(2, gota);
-  lcd.createChar(3, heartVoid);
-  lcd.createChar(4, heartFull);
+  lcd.createChar(3, heart);
 
   dht.begin();
 
@@ -110,10 +99,11 @@ void setup() {
 
   Starting();
 }
-
 void loop() {
   if (!SensoresRead()) return;
   LCD();
+  Alarms();
+  delay(500);
 }
 //==========================================================================================//
 
@@ -141,7 +131,7 @@ bool SensoresRead() {
   umid = dht.readHumidity();
   temp = dht.readTemperature();
   potValue = analogRead(pot);
-  batimentos = map(potValue, 0, 4095, 50, 130);
+  batimentos = map(potValue, 0, 4095, 0, 200);
 
   if (isnan(umid) || isnan(temp)) {
     Serial.println("Falha no sensor!!!");
@@ -167,9 +157,19 @@ void LCD()
   lcd.print("C");
 
   lcd.setCursor(4, 1);
-  lcd.write(4);
+  lcd.write(3);
   lcd.print(batimentos);
   lcd.print("bpm");
-  delay(1000);
+  lcd.setCursor(4, 1);
+  lcd.blink();
+}
+void Alarms()
+{
+  if(batimentos <= 50 || batimentos >= 160)
+  {
+    ledRedState = !ledRedState;
+  }
+  digitalWrite(ledGreen, ledGreenState);
+  digitalWrite(ledRed, ledRedState);
 }
 //==========================================================================================//
