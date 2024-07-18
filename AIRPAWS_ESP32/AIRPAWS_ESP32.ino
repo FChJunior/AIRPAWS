@@ -2,7 +2,7 @@
   Projto: AIR PAWS
   Autor Cód.: Chagas Junior
   Data: 17/07/2024
-  Versão: 0.3
+  Versão: 1.0
 //==========================================================================================*/
 
 #pragma region ESCOPO
@@ -109,9 +109,9 @@ float airports[3][2] = {
   { -3.7763, -38.5326 }    // Aeroporto de Fortaleza (FOR)
 };
 String airportsNames[3] = {
-  "de Guarulios - SP",
-  "do Galeão - RJ",
-  "Pinto Martins - FOR"
+  "Aeroporto de Guarulios - SP",
+  "Aeroporto Santos Dumont - RJ",
+  "Aeroporto Pinto Martins - FOR"
 };
 unsigned long lastUpdate = 0;
 //==========================================================================================//
@@ -188,9 +188,13 @@ void ConnectingWifi() {
   lcd.setCursor(2, 1);
   lcd.print("CONECTADO!!!");
   delay(2000);
+  ledGreenState = 1;
   ServerInit();
 }
 void Reconnection() {
+  connected = false;
+  ledGreenState = connected ? 1 : 0;
+  digitalWrite(ledGreen, ledGreenState);
   lcd.clear();
   lcd.noBlink();
   lcd.setCursor(4, 0);
@@ -216,6 +220,7 @@ void Reconnection() {
     }
   }
 
+  connected = true;
   lcd.clear();
   lcd.setCursor(3, 0);
   lcd.print("Rede WIFI:");
@@ -234,6 +239,7 @@ bool SensoresRead() {
   batimentos = map(potValue, 0, 4095, 0, 200);
 
   if (isnan(umid) || isnan(temp)) {
+    lcd.clear();
     Serial.println("Falha no sensor!!!");
     lcd.setCursor(0, 0);
     lcd.print("Falha no sensor!!!");
@@ -267,24 +273,32 @@ void Alarms() {
   if (batimentos <= 50 || batimentos >= 160) {
     ledRedState = !ledRedState;
   } else ledRedState = LOW;
-  digitalWrite(ledGreen, ledGreenState);
   digitalWrite(ledRed, ledRedState);
+
+  digitalWrite(ledGreen, ledGreenState);
 }
 //==========================================================================================//
 
 //============================ Métodos Atualização Coordenadas =============================//
 void updateCoordinates() {
-  int index = random(0, 3);  // Seleciona aleatoriamente um dos três aeroportos
-  latitude = airports[index][0];
-  longitude = airports[index][1];
-  airport = airportsNames[index];
+  if (ledGreenState) {
+    int index = random(0, 3);  // Seleciona aleatoriamente um dos três aeroportos
+    latitude = airports[index][0];
+    longitude = airports[index][1];
+    airport = airportsNames[index];
+  } else {
+    latitude = 0;
+    longitude = 0;
+    airport = "GPS Desligado";
+  }
 }
 //==========================================================================================//
 
 //=================================== Métodos Web Page =====================================//
 void ServerInit() {
   server.on("/", handleRoot);  // Define o manipulador para a URL raiz
-  server.begin();              // Inicia o servidor web
+  server.on("/gps", handleGPS);
+  server.begin();  // Inicia o servidor web
   Serial.println("Servidor HTTP iniciado.");
 }
 String WebPage() {
@@ -311,9 +325,9 @@ String WebPage() {
   webPage += "</div>";
   webPage += "<h1>Localização</h1>";
   webPage += "<div class='card'>";
-  webPage += "<p><i class='fas fa-map-marker-alt icon'></i>Lati: " + String(latitude, 6) + "°</p>";    // Mostra a latitude com ícone de marcador
+  webPage += "<p><i class='fas fa-map-marker-alt icon'></i>Lati: " + String(latitude, 6) + "°</p>";   // Mostra a latitude com ícone de marcador
   webPage += "<p><i class='fas fa-map-marker-alt icon'></i>Long: " + String(longitude, 6) + "°</p>";  // Mostra a longitude com ícone de marcador
-  webPage += "<p><i class='fas fa-map-marker-alt icon'></i>Localização: Aeroporto " + String(airport) + "</p>";
+  webPage += "<p><i class='fas fa-map-marker-alt icon'></i>Localização: " + String(airport) + "</p>";
   webPage += "</div>";
   webPage += "</div></body></html>";
   return webPage;
@@ -322,6 +336,12 @@ void handleRoot() {
   if (!SensoresRead()) return;               // Lê os dados do sensor DHT e verifica erros
   server.send(200, "text/html", WebPage());  // Envia a página web ao cliente
   Serial.println("Página web enviada.");
+}
+void handleGPS() {
+  server.send(200, "text/html", "GPS");
+  ledGreenState = !ledGreenState;
+  server.sendHeader("Location", "/");
+  server.send(303);
 }
 //==========================================================================================//
 #pragma endregion
