@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
     <title>Informações da Caixa de Transporte e do Pet</title>
-    <meta charset='UTF-8'>
-    <meta http-equiv='refresh' content='3'> <!-- Atualiza a página a cada 3 segundos -->
-    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css'> <!-- Link para Font Awesome -->
+    <meta charset="UTF-8" http-equiv="refresh" content="3">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,66 +12,153 @@
             padding: 0;
             display: flex;
             justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f5f5f5;
+            align-items: flex-start;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #000000, #007bff);
+            overflow-y: auto;
+            padding-top: 60px;
         }
         .container {
-            background-color: #fff;
-            padding: 80px;
+            background-color: rgba(1, 1, 1, 0.9);
+            padding: 30px;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 500px;
-            text-align: left;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            margin-top: 20px;
         }
         .card {
             background-color: #007bff;
-            padding: 50px;
+            padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
             color: #fff;
             text-align: left;
+            width: 100%;
+            box-sizing: border-box;
         }
         h1 {
-            font-size: 50px;
+            font-size: 36px;
             margin-bottom: 20px;
+            color: #007bff;
+        }
+        h2 {
+            font-size: 22px;
+            margin-bottom: 15px;
+            color: #ffffff;
         }
         p {
-            font-size: 30px;
-            margin: 10px 0;
+            font-size: 16px;
+            margin: 5px 0;
+            color: #fff;
         }
         .icon {
             margin-right: 5px;
         }
+        .form-group {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .form-group label {
+            flex: 1;
+            text-align: right;
+            padding-right: 10px;
+            font-weight: bold;
+        }
+        .form-group input {
+            flex: 2;
+            padding: 10px;
+            border: 1px solid #007bff;
+            border-radius: 5px;
+            background-color: #fff;
+            color: #333;
+            font-size: 16px;
+        }
+        .form-group input[readonly] {
+            background-color: #e9ecef;
+            border: 1px solid #007bff;
+        }
         @media screen and (max-width: 600px) {
             .container {
-                margin: 10px;
+                padding: 20px;
+            }
+            .form-group {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .form-group label {
+                text-align: left;
+                padding-right: 0;
+                margin-bottom: 5px;
             }
         }
     </style>
 </head>
 <body>
-    <div class='container'>
-        <h1>Informações do Animal</h1>
-        <div class='card'>
-            <p><strong>Nome:</strong> Rex</p> <!-- Exemplo de nome do animal -->
-            <p><strong>Espécie:</strong> Cão</p> <!-- Exemplo de espécie -->
-            <p><strong>Raça:</strong> Labrador</p> <!-- Exemplo de raça -->
-            <p><strong>Idade:</strong> 3 anos</p> <!-- Exemplo de idade -->
-            <p><strong>Peso:</strong> 25 kg</p> <!-- Exemplo de peso -->
+    <div class="container">
+        <h1>Air Paws</h1>
+        <h2>Informações do Animal</h2>
+        <div class="card">
+            <form>
+                <div class="form-group">
+                    <label for="animalName"><i class="fas fa-paw icon"></i>Nome do Animal:</label>
+                    <input type="text" id="animalName" value="Rex" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="animalSpecies"><i class="fas fa-dog icon"></i>Espécie:</label>
+                    <input type="text" id="animalSpecies" value="Cachorro" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="animalBreed"><i class="fas fa-paw icon"></i>Raça:</label>
+                    <input type="text" id="animalBreed" value="Labrador" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="animalAge"><i class="fas fa-birthday-cake icon"></i>Idade:</label>
+                    <input type="text" id="animalAge" value="5 anos" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="animalWeight"><i class="fas fa-weight icon"></i>Peso:</label>
+                    <input type="text" id="animalWeight" value="20 kg" readonly>
+                </div>
+            </form>
         </div>
-        <h1>Informações do PET</h1>
-        <div class='card'>
-            <p><i class='fas fa-thermometer-half icon'></i>Temperatura: 25.3 °C</p> <!-- Exemplo de temperatura -->
-            <p><i class='fas fa-tint icon'></i>Umidade: 60 %</p>                   <!-- Exemplo de umidade -->
-            <p><i class='fas fa-heart icon'></i>Batimentos: 80 bpm</p>             <!-- Exemplo de batimentos -->
+        <h2>Dados da Viagem</h2>
+        <div class="card">
+            <form>
+                <div class="form-group">
+                    <label for="temperature"><i class="fas fa-thermometer-half icon"></i>Temperatura:</label>
+                    <input type="text" id="temperature" value="25 °C" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="humidity"><i class="fas fa-tint icon"></i>Umidade:</label>
+                    <input type="text" id="humidity" value="60 %" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="heartbeat"><i class="fas fa-heart icon"></i>Batimentos:</label>
+                    <input type="text" id="heartbeat" value="80 bpm" readonly>
+                </div>
+            </form>
         </div>
-        <h1>Localização</h1>
-        <div class='card'>
-            <p><i class='fas fa-map-marker-alt icon'></i>Latitude: -23.550520°</p>    <!-- Exemplo de latitude -->
-            <p><i class='fas fa-map-marker-alt icon'></i>Longitude: -46.633308°</p>  <!-- Exemplo de longitude -->
-            <p><i class='fas fa-map-marker-alt icon'></i>Localização: Aeroporto SP</p> <!-- Exemplo de localização -->
+        <h2>Localização</h2>
+        <div class="card">
+            <form>
+                <div class="form-group">
+                    <label for="latitude"><i class="fas fa-map-marker-alt icon"></i>Latitude:</label>
+                    <input type="text" id="latitude" value="-23.550520°" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="longitude"><i class="fas fa-map-marker-alt icon"></i>Longitude:</label>
+                    <input type="text" id="longitude" value="-46.633308°" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="location"><i class="fas fa-map-marker-alt icon"></i>Localização:</label>
+                    <input type="text" id="location" value="Aeroporto de Congonhas" readonly>
+                </div>
+            </form>
         </div>
     </div>
 </body>

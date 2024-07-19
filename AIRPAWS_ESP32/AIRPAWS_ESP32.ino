@@ -102,6 +102,7 @@ int ledGreenState = 0;
 int potValue = 0;
 int batimentos = 0;
 bool alarmB = 1;
+bool alarmL = 1;
 
 // Simulated GPS coordinates
 int indexprevious = 0;
@@ -123,8 +124,8 @@ String airportsNames[3] = {
 };
 unsigned long lastUpdate = 0;
 
-String phoneNumber = "+558585288335";
-String apiKey = "8151819";
+String phoneNumber = "";
+String apiKey = "";
 //==========================================================================================//
 
 #pragma endregion
@@ -341,6 +342,7 @@ void updateCoordinates() {
     while (ind == indexprevious) {
       ind = random(0, 3);  // Seleciona aleatoriamente um dos três aeroportos
     }
+    alarmL = 1;
     indexprevious = ind;
     latitude = airports[ind][0];
     longitude = airports[ind][1];
@@ -358,6 +360,14 @@ void updateCoordinates() {
     latitude = 0;
     longitude = 0;
     airport = "GPS Desligado";
+
+    if (alarmL) {
+      alarmL = 0;
+      String message = "";
+      message += "*Informações do seu Pet Atualizadas: (Localização)*\n\n";
+      message += "*Localização perdida*";
+      sendMessage(message);
+    }
   }
   server.sendHeader("Location", "/");
   server.send(303);
@@ -366,68 +376,85 @@ void updateCoordinates() {
 
 //=================================== Métodos Web Page =====================================//
 void ServerInit() {
-    String nameSever = "airpaws";
-    if (!MDNS.begin(nameSever)) {
+  String nameSever = "airpaws";
+  if (!MDNS.begin(nameSever)) {
     Serial.println("Error setting up MDNS responder!");
     while (1) {
       delay(1000);
     }
   }
   MDNS.addService("http", "tcp", 80);
+
+  server.on("/", handleRoot);  // Define o manipulador para a URL raiz
+  server.on("/gps", handleGPS);
+  server.on("/loc", updateCoordinates);
+  server.on("/phone", HTTP_POST, phoneUpdate);
+  server.on("/key", HTTP_POST, keyUpdate);
+  server.begin();  // Inicia o servidor web
+  Serial.println("Servidor HTTP iniciado.");
+
+  while (phoneNumber == "" && apiKey == "") {
+    lcd.clear();
+    lcd.print("  Insira o tel.");
+    lcd.setCursor(5, 1);
+    lcd.print("do Tutor");
+    server.handleClient();
+    delay(500);
+  }
+
+  delay(500);
   String m = "Para acomanhar via *navegador* use o seguinte link: http:// " + nameSever + ".local";
   sendMessage(m);
 
   SensoresRead();
   updateCoordinates();
-  
-  server.on("/", handleRoot);  // Define o manipulador para a URL raiz
-  server.on("/gps", handleGPS);
-  server.on("/loc", updateCoordinates);
-  server.begin();  // Inicia o servidor web
-  Serial.println("Servidor HTTP iniciado.");
 }
 String WebPage() {
-  String webPage = "<!DOCTYPE html><html>";  // Inicia o HTML da página web
-  webPage += "<head><title>Informações da Caixa de Transporte e do Pet</title>";
-  webPage += "<meta charset='UTF-8' http-equiv='refresh' content='3'>";  // Atualiza a página a cada 3 segundos
-  webPage += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
-  webPage += "<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css'>";
-  webPage += "<style>";  // CSS para estilização dos elementos
-  webPage += "body {font-family: Arial, sans-serif; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f5f5f5;}";
-  webPage += ".container {background-color: #fff; padding: 50px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); width: 400px; text-align: center;}";
-  webPage += ".card {background-color: #007bff; padding: 35px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); margin-bottom: 40px; color: #fff; text-align: left;}";
-  webPage += "h1 {font-size: 25px; margin-bottom: 10px;}";
-  webPage += "p {font-size: 18px; margin: 2px 0;}";
-  webPage += ".icon {margin-right: 5px;}";
-  webPage += "@media screen and (max-width: 600px) { .container {margin: 10px;}}";
-  webPage += "</style></head><body>";
-  webPage += "<div class='container'>";
-  webPage += "<h1>Informações do Animal</h1>";  // Novo card com informações do animal
-  webPage += "<div class='card'>";
-  webPage += "<p>Nome do Animal: Rex</p>";  // Exemplo de nome do animal
-  webPage += "<p>Espécie: Cachorro</p>";    // Exemplo de espécie
-  webPage += "<p>Raça: Labrador</p>";       // Exemplo de raça
-  webPage += "<p>Idade: 5 anos</p>";        // Exemplo de idade
-  webPage += "<p>Peso: 20 kg</p>";          // Exemplo de peso
-  webPage += "</div>";
-  webPage += "<h1>Informações de Status</h1>";
-  webPage += "<div class='card'>";
-  webPage += "<p><i class='fas fa-thermometer-half icon'></i>Temperatura: " + String(temp) + " °C</p>";
-  webPage += "<p><i class='fas fa-tint icon'></i>Umidade: " + String(umid) + " %</p>";
-  webPage += "<p><i class='fas fa-heart icon'></i>Batimentos: " + String(batimentos) + " bpm</p>";
-  webPage += "</div>";
-  webPage += "<h1>Localização</h1>";
-  webPage += "<div class='card'>";
-  webPage += "<p><i class='fas fa-map-marker-alt icon'></i>Lati: " + String(latitude, 6) + "°</p>";
-  webPage += "<p><i class='fas fa-map-marker-alt icon'></i>Long: " + String(longitude, 6) + "°</p>";
-  webPage += "<p><i class='fas fa-map-marker-alt icon'></i>Localização: " + String(airport) + "</p>";
-  webPage += "</div>";
-  webPage += "</div></body></html>";
-
-  return webPage;
-
-  return webPage;
+    String webPage = "<!DOCTYPE html><html lang='pt-BR'>";
+    webPage += "<head><title>Informações da Caixa de Transporte e do Pet</title>";
+    webPage += "<meta charset='UTF-8' http-equiv='refresh' content='3'>";
+    webPage += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
+    webPage += "<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css'>";
+    webPage += "<style>";
+    webPage += "body {font-family: Arial, sans-serif; margin: 0; padding: 0; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; background: linear-gradient(135deg, #000000, #007bff); overflow-y: auto; padding-top: 60px;}";
+    webPage += ".container {background-color: rgba(1, 1, 1, 0.9); padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); width: 90%; max-width: 500px; text-align: center; margin-top: 20px;}";
+    webPage += ".card {background-color: #007bff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); margin-bottom: 30px; color: #fff; text-align: left; width: 100%; box-sizing: border-box;}";
+    webPage += "h1 {font-size: 36px; margin-bottom: 20px; color: #007bff;}";
+    webPage += "h2 {font-size: 22px; margin-bottom: 15px; color: #ffffff;}";
+    webPage += "p {font-size: 16px; margin: 5px 0; color: #fff;}";
+    webPage += ".icon {margin-right: 5px;}";
+    webPage += ".form-group {margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;}";
+    webPage += ".form-group label {flex: 1; text-align: right; padding-right: 10px; font-weight: bold;}";
+    webPage += ".form-group input {flex: 2; padding: 10px; border: 1px solid #007bff; border-radius: 5px; background-color: #fff; color: #333; font-size: 16px;}";
+    webPage += ".form-group input[readonly] {background-color: #e9ecef; border: 1px solid #007bff;}";
+    webPage += "@media screen and (max-width: 600px) { .container { padding: 20px; } .form-group { flex-direction: column; align-items: flex-start; } .form-group label { text-align: left; padding-right: 0; margin-bottom: 5px; }}";
+    webPage += "</style></head><body>";
+    webPage += "<div class='container'>";
+    webPage += "<h1>Air Paws</h1>";
+    webPage += "<h2>Informações do Animal</h2>";
+    webPage += "<div class='card'><form>";
+    webPage += "<div class='form-group'><label for='animalName'><i class='fas fa-paw icon'></i>Nome do Animal:</label><input type='text' id='animalName' value='Rex' readonly></div>";
+    webPage += "<div class='form-group'><label for='animalSpecies'><i class='fas fa-dog icon'></i>Espécie:</label><input type='text' id='animalSpecies' value='Cachorro' readonly></div>";
+    webPage += "<div class='form-group'><label for='animalBreed'><i class='fas fa-paw icon'></i>Raça:</label><input type='text' id='animalBreed' value='Labrador' readonly></div>";
+    webPage += "<div class='form-group'><label for='animalAge'><i class='fas fa-birthday-cake icon'></i>Idade:</label><input type='text' id='animalAge' value='5 anos' readonly></div>";
+    webPage += "<div class='form-group'><label for='animalWeight'><i class='fas fa-weight icon'></i>Peso:</label><input type='text' id='animalWeight' value='20 kg' readonly></div>";
+    webPage += "</form></div>";
+    webPage += "<h2>Dados da Viagem</h2>";
+    webPage += "<div class='card'><form>";
+    webPage += "<div class='form-group'><label for='temperature'><i class='fas fa-thermometer-half icon'></i>Temperatura:</label><input type='text' id='temperature' value='" + String(temp) + " °C' readonly></div>";
+    webPage += "<div class='form-group'><label for='humidity'><i class='fas fa-tint icon'></i>Umidade:</label><input type='text' id='humidity' value='" + String(umid) + " %' readonly></div>";
+    webPage += "<div class='form-group'><label for='heartbeat'><i class='fas fa-heart icon'></i>Batimentos:</label><input type='text' id='heartbeat' value='" + String(batimentos) + " bpm' readonly></div>";
+    webPage += "</form></div>";
+    webPage += "<h2>Localização</h2>";
+    webPage += "<div class='card'><form>";
+    webPage += "<div class='form-group'><label for='latitude'><i class='fas fa-map-marker-alt icon'></i>Latitude:</label><input type='text' id='latitude' value='" + String(latitude, 6) + "°' readonly></div>";
+    webPage += "<div class='form-group'><label for='longitude'><i class='fas fa-map-marker-alt icon'></i>Longitude:</label><input type='text' id='longitude' value='" + String(longitude, 6) + "°' readonly></div>";
+    webPage += "<div class='form-group'><label for='location'><i class='fas fa-map-marker-alt icon'></i>Localização:</label><input type='text' id='location' value='" + String(airport) + "' readonly></div>";
+    webPage += "</form></div></div></body></html>";
+    return webPage;
 }
+
+
 void handleRoot() {
   if (!SensoresRead()) return;               // Lê os dados do sensor DHT e verifica erros
   server.send(200, "text/html", WebPage());  // Envia a página web ao cliente
@@ -438,6 +465,14 @@ void handleGPS() {
   ledGreenState = !ledGreenState;
   server.sendHeader("Location", "/");
   server.send(303);
+}
+void phoneUpdate() {
+  phoneNumber = server.arg(0);
+  server.send(200, "text/plain", "Message received: " + phoneNumber);
+}
+void keyUpdate() {
+  apiKey = server.arg(0);
+  server.send(200, "text/plain", "Message received: " + apiKey);
 }
 //==========================================================================================//
 #pragma endregion
