@@ -367,12 +367,13 @@ void updateCoordinates() {
 //=================================== Métodos Web Page =====================================//
 void ServerInit() {
     String nameSever = "airpaws";
-    if (!MDNS.begin(nameSever))) {
+    if (!MDNS.begin(nameSever)) {
     Serial.println("Error setting up MDNS responder!");
     while (1) {
       delay(1000);
     }
   }
+  MDNS.addService("http", "tcp", 80);
   String m = "Para acomanhar via *navegador* use o seguinte link: http:// " + nameSever + ".local";
   sendMessage(m);
 
