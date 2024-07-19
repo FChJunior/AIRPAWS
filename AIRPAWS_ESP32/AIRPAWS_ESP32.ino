@@ -2,7 +2,7 @@
   Projto: AIR PAWS
   Autor Cód.: Chagas Junior
   Data: 17/07/2024
-  Versão: 1.0
+  Versão: 1.1
 //==========================================================================================*/
 
 #pragma region ESCOPO
@@ -11,6 +11,8 @@
 #include <DHT.h>
 #include <WiFiManager.h>
 #include <WebServer.h>
+#include <HTTPClient.h>
+#include <UrlEncode.h>
 //==========================================================================================//
 
 //=================================== Definições LCD ========================================//
@@ -22,7 +24,7 @@ LiquidCrystal_I2C lcd(address, coluns, rows);
 //==========================================================================================//
 
 //=================================== Definições DHT ========================================//
-#define DHTPIN 5
+#define DHTPIN 4
 #define DHTTYPE DHT11
 float temp = 0;
 float umid = 0;
@@ -91,13 +93,18 @@ byte heart[8] = {
 #define ledRed 13
 #define ledGreen 12
 #define pot A0
+#define buzz 14
 
 int ledRedState = 0;
+int buzzerState = 0;
 int ledGreenState = 0;
 int potValue = 0;
 int batimentos = 0;
+bool alarmB = 1;
 
 // Simulated GPS coordinates
+int indexprevious = 0;
+int ind = 0;
 float latitude;
 float longitude;
 String airport;
@@ -114,6 +121,9 @@ String airportsNames[3] = {
   "Aeroporto Pinto Martins - FOR"
 };
 unsigned long lastUpdate = 0;
+
+String phoneNumber = "+558585288335";
+String apiKey = "8151819";
 //==========================================================================================//
 
 #pragma endregion
@@ -144,10 +154,12 @@ void loop() {
   SensoresScreem();
   Alarms();
   server.handleClient();
-  if (millis() - lastUpdate >= 5000) {  // Atualiza a cada 10 segundos
-    updateCoordinates();
-    lastUpdate = millis();
-  }
+  //if (ledGreenState ) updateCoordinates();
+  // if (millis() - lastUpdate >= 10000) {  // Atualiza a cada 10 segundos
+  //   updateCoordinates();
+  //   lastUpdate = millis();
+
+  // }
 }
 //==========================================================================================//
 
@@ -272,64 +284,138 @@ void SensoresScreem() {
 void Alarms() {
   if (batimentos <= 50 || batimentos >= 160) {
     ledRedState = !ledRedState;
-  } else ledRedState = LOW;
+    buzzerState = buzzerState == 500 ? 0 : 500;
+
+    if (alarmB) {
+      alarmB = 0;
+      String message = "";
+      message += "*Informações do seu Pet Atualizadas (Alerta):* \n";
+      message += "*Status:* Batimentos alterados!!!\n\n";
+      message += "*Batimentos: " + String(batimentos) + " bpm*\n";
+      message += "*Temperatura:* " + String(temp) + " °C\n";
+      message += "*Umidade:* " + String(umid) + " %\n";
+      message += "*Localização:* " + airport;
+      sendMessage(message);
+    }
+
+  } else {
+    ledRedState = LOW;
+    buzzerState = 0;
+    alarmB = 1;
+  }
   digitalWrite(ledRed, ledRedState);
+  tone(buzz, buzzerState);
 
   digitalWrite(ledGreen, ledGreenState);
+}
+void sendMessage(String message) {
+
+  // Data to send with HTTP POST
+  String url = "https://api.callmebot.com/whatsapp.php?phone=" + phoneNumber + "&apikey=" + apiKey + "&text=" + urlEncode(message);
+  HTTPClient http;
+  http.begin(url);
+
+  // Specify content-type header
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+  // Send HTTP POST request
+  int httpResponseCode = http.POST(url);
+  if (httpResponseCode == 200) {
+    Serial.print("Mensagem enviada com sucesso");
+  } else {
+    Serial.println("Erro no envio da mensagem");
+    Serial.print("HTTP response code: ");
+    Serial.println(httpResponseCode);
+  }
+
+  // Free resources
+  http.end();
 }
 //==========================================================================================//
 
 //============================ Métodos Atualização Coordenadas =============================//
 void updateCoordinates() {
+  server.send(200, "text/html", "LOC");
   if (ledGreenState) {
-    int index = random(0, 3);  // Seleciona aleatoriamente um dos três aeroportos
-    latitude = airports[index][0];
-    longitude = airports[index][1];
-    airport = airportsNames[index];
+    while (ind == indexprevious) {
+      ind = random(0, 3);  // Seleciona aleatoriamente um dos três aeroportos
+    }
+    indexprevious = ind;
+    latitude = airports[ind][0];
+    longitude = airports[ind][1];
+    airport = airportsNames[ind];
+
+    String message = "";
+    message += "*Informações do seu Pet Atualizadas: (Localização)*\n\n";
+    message += "*Batimentos:* " + String(batimentos) + " bpm\n";
+    message += "*Temperatura:* " + String(temp) + " °C\n";
+    message += "*Umidade:* " + String(umid) + " %\n";
+    message += "*Localização: " + airport + "*";
+    sendMessage(message);
+
   } else {
     latitude = 0;
     longitude = 0;
     airport = "GPS Desligado";
   }
+  server.sendHeader("Location", "/");
+  server.send(303);
 }
 //==========================================================================================//
 
 //=================================== Métodos Web Page =====================================//
 void ServerInit() {
+  String ip = WiFi.localIP().toString();
+  Serial.println(WiFi.localIP());
+  String m = "Para acomanhar via *navegador* use o seguinte link: http:// " + ip;
+  sendMessage(m);
+  updateCoordinates();
   server.on("/", handleRoot);  // Define o manipulador para a URL raiz
   server.on("/gps", handleGPS);
+  server.on("/loc", updateCoordinates);
   server.begin();  // Inicia o servidor web
   Serial.println("Servidor HTTP iniciado.");
 }
 String WebPage() {
   String webPage = "<!DOCTYPE html><html>";  // Inicia o HTML da página web
   webPage += "<head><title>Informações da Caixa de Transporte e do Pet</title>";
-  webPage += "<meta charset='UTF-8' http-equiv='refresh' content='3'>";                                                         // Atualiza a página a cada 3 segundos
-  webPage += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";                                          // Meta tag para responsividade
-  webPage += "<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css'>";  // Link para Font Awesome
-  webPage += "<style>";                                                                                                         // CSS para estilização dos elementos
+  webPage += "<meta charset='UTF-8' http-equiv='refresh' content='3'>";  // Atualiza a página a cada 3 segundos
+  webPage += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
+  webPage += "<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css'>";
+  webPage += "<style>";  // CSS para estilização dos elementos
   webPage += "body {font-family: Arial, sans-serif; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f5f5f5;}";
   webPage += ".container {background-color: #fff; padding: 50px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); width: 400px; text-align: center;}";
   webPage += ".card {background-color: #007bff; padding: 35px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); margin-bottom: 40px; color: #fff; text-align: left;}";
-  webPage += "h1 {font-size: 40px; margin-bottom: 20px;}";
+  webPage += "h1 {font-size: 25px; margin-bottom: 10px;}";
   webPage += "p {font-size: 18px; margin: 2px 0;}";
   webPage += ".icon {margin-right: 5px;}";
-  webPage += "@media screen and (max-width: 600px) { .container {margin: 10px;}}";  // Media query para ajustes em dispositivos menores
+  webPage += "@media screen and (max-width: 600px) { .container {margin: 10px;}}";
   webPage += "</style></head><body>";
   webPage += "<div class='container'>";
-  webPage += "<h1>Informações do PET</h1>";
+  webPage += "<h1>Informações do Animal</h1>";  // Novo card com informações do animal
   webPage += "<div class='card'>";
-  webPage += "<p><i class='fas fa-thermometer-half icon'></i>Temperatura: " + String(temp) + " °C</p>";  // Mostra a temperatura com ícone de termômetro
-  webPage += "<p><i class='fas fa-tint icon'></i>Umidade: " + String(umid) + " %</p>";                   // Mostra a umidade com ícone de gota
-  webPage += "<p><i class='fas fa-heart icon'></i>Batimentos: " + String(batimentos) + " bpm</p>";       // Mostra a umidade com ícone de gota
+  webPage += "<p>Nome do Animal: Rex</p>";  // Exemplo de nome do animal
+  webPage += "<p>Espécie: Cachorro</p>";    // Exemplo de espécie
+  webPage += "<p>Raça: Labrador</p>";       // Exemplo de raça
+  webPage += "<p>Idade: 5 anos</p>";        // Exemplo de idade
+  webPage += "<p>Peso: 20 kg</p>";          // Exemplo de peso
+  webPage += "</div>";
+  webPage += "<h1>Informações de Status</h1>";
+  webPage += "<div class='card'>";
+  webPage += "<p><i class='fas fa-thermometer-half icon'></i>Temperatura: " + String(temp) + " °C</p>";
+  webPage += "<p><i class='fas fa-tint icon'></i>Umidade: " + String(umid) + " %</p>";
+  webPage += "<p><i class='fas fa-heart icon'></i>Batimentos: " + String(batimentos) + " bpm</p>";
   webPage += "</div>";
   webPage += "<h1>Localização</h1>";
   webPage += "<div class='card'>";
-  webPage += "<p><i class='fas fa-map-marker-alt icon'></i>Lati: " + String(latitude, 6) + "°</p>";   // Mostra a latitude com ícone de marcador
-  webPage += "<p><i class='fas fa-map-marker-alt icon'></i>Long: " + String(longitude, 6) + "°</p>";  // Mostra a longitude com ícone de marcador
+  webPage += "<p><i class='fas fa-map-marker-alt icon'></i>Lati: " + String(latitude, 6) + "°</p>";
+  webPage += "<p><i class='fas fa-map-marker-alt icon'></i>Long: " + String(longitude, 6) + "°</p>";
   webPage += "<p><i class='fas fa-map-marker-alt icon'></i>Localização: " + String(airport) + "</p>";
   webPage += "</div>";
   webPage += "</div></body></html>";
+
+  return webPage;
+
   return webPage;
 }
 void handleRoot() {
