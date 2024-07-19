@@ -2,7 +2,7 @@
   Projto: AIR PAWS
   Autor Cód.: Chagas Junior
   Data: 17/07/2024
-  Versão: 1.1
+  Versão: 1.2
 //==========================================================================================*/
 
 #pragma region ESCOPO
@@ -13,6 +13,7 @@
 #include <WebServer.h>
 #include <HTTPClient.h>
 #include <UrlEncode.h>
+#include <ESPmDNS.h>
 //==========================================================================================//
 
 //=================================== Definições LCD ========================================//
@@ -365,11 +366,19 @@ void updateCoordinates() {
 
 //=================================== Métodos Web Page =====================================//
 void ServerInit() {
-  String ip = WiFi.localIP().toString();
-  Serial.println(WiFi.localIP());
-  String m = "Para acomanhar via *navegador* use o seguinte link: http:// " + ip;
+    String nameSever = "airpaws";
+    if (!MDNS.begin(nameSever))) {
+    Serial.println("Error setting up MDNS responder!");
+    while (1) {
+      delay(1000);
+    }
+  }
+  String m = "Para acomanhar via *navegador* use o seguinte link: http:// " + nameSever + ".local";
   sendMessage(m);
+
+  SensoresRead();
   updateCoordinates();
+  
   server.on("/", handleRoot);  // Define o manipulador para a URL raiz
   server.on("/gps", handleGPS);
   server.on("/loc", updateCoordinates);
